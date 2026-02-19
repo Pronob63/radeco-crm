@@ -1,0 +1,803 @@
+{
+  "project": {
+    "name": "RADECO CRM",
+    "version": "1.0.0",
+    "description": "CRM Premium para RADECO - Gestión integral de clientes, leads, oportunidades y campañas",
+    "status": "Pre-Producción / MVP Funcional con bugs críticos resueltos",
+    "audit_date": "2026-02-18",
+    "auditor": "GitHub Copilot (Claude Sonnet 4.5)",
+    "workspace_path": "F:\\CRM - Radeco"
+  },
+  "stack": {
+    "frontend": {
+      "framework": "Next.js 14.2.0 (App Router)",
+      "react": "18.2.0",
+      "typescript": "5.4.2",
+      "styling": "Tailwind CSS 3.4.1",
+      "ui_library": "shadcn/ui (Radix UI primitives)",
+      "form_handling": "React Hook Form 7.51.0 + Zod 3.22.4",
+      "icons": "Lucide React 0.356.0",
+      "charts": "Recharts 2.12.2",
+      "state_management": "Zustand 4.5.2 (configurado, poco usado)",
+      "pdf": "@react-pdf/renderer 3.4.0"
+    },
+    "backend": {
+      "api": "Next.js API Routes (App Router /app/api/*)",
+      "auth": "NextAuth v5.0.0-beta.15",
+      "orm": "Prisma 5.11.0",
+      "database": "MySQL (XAMPP localhost:3306)",
+      "password_hashing": "bcryptjs 2.4.3",
+      "email": "nodemailer 7.0.13",
+      "validation": "Zod 3.22.4"
+    },
+    "devtools": {
+      "linter": "ESLint 8.57.0 (NO CONFIGURADO)",
+      "formatter": "Prettier 3.2.5",
+      "testing": "Playwright 1.42.1 + Jest (sin tests)",
+      "dev_runtime": "tsx 4.7.1"
+    },
+    "infrastructure": {
+      "docker": "docker-compose.yml existe (PostgreSQL), NO EN USO",
+      "env_management": ".env",
+      "node_version": "v24.13.1"
+    }
+  },
+  "design_system": {
+    "colors": {
+      "primary": {
+        "brand": "#2c9d5f",
+        "scale": {
+          "50": "#f0f9f4",
+          "100": "#dcf2e4",
+          "200": "#bae5cc",
+          "300": "#88d2a8",
+          "400": "#51b87e",
+          "500": "#2c9d5f",
+          "600": "#1e7e4b",
+          "700": "#19643d",
+          "800": "#165033",
+          "900": "#13422b"
+        }
+      },
+      "neutral": {
+        "name": "sand",
+        "scale": {
+          "50": "#fafaf9",
+          "100": "#f5f5f4",
+          "200": "#e7e5e4",
+          "300": "#d6d3d1",
+          "400": "#a8a29e",
+          "500": "#78716c",
+          "600": "#57534e",
+          "700": "#44403c",
+          "800": "#292524",
+          "900": "#1c1917"
+        }
+      },
+      "semantic": {
+        "background": "hsl(0 0% 100%)",
+        "foreground": "hsl(20 14.3% 4.1%)",
+        "destructive": "hsl(0 84.2% 60.2%)",
+        "border": "hsl(20 5.9% 90%)",
+        "ring": "hsl(142 76% 36%)"
+      }
+    },
+    "typography": {
+      "font_family": "Inter (variable font)",
+      "scale": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem"
+      },
+      "weights": ["400 (regular)", "500 (medium)", "600 (semibold)", "700 (bold)"]
+    },
+    "spacing": {
+      "radius_base": "0.5rem",
+      "radius_variants": {
+        "sm": "4px",
+        "md": "6px",
+        "lg": "8px"
+      }
+    },
+    "components": {
+      "shadcn_ui": [
+        "Button",
+        "Card",
+        "Input",
+        "Badge",
+        "Table",
+        "Dialog",
+        "DropdownMenu",
+        "Select",
+        "Combobox",
+        "Popover",
+        "Checkbox",
+        "Label",
+        "Avatar",
+        "Command"
+      ],
+      "custom": [
+        "ContactFormDialog",
+        "Header",
+        "Sidebar"
+      ]
+    },
+    "consistency_score": "8/10",
+    "issues": [
+      "Badge colors: algunos usan Tailwind directo, otros variantes shadcn",
+      "Loading states: texto inconsistente (Cargando vs Loading)",
+      "Empty states: diseño varía entre módulos"
+    ]
+  },
+  "routes": [
+    {
+      "path": "/",
+      "file": "app/page.tsx",
+      "type": "Server",
+      "auth": false,
+      "description": "Landing, redirige a /dashboard"
+    },
+    {
+      "path": "/login",
+      "file": "app/login/page.tsx",
+      "type": "Client",
+      "auth": false,
+      "description": "Formulario de login NextAuth"
+    },
+    {
+      "path": "/dashboard",
+      "file": "app/dashboard/page.tsx",
+      "type": "Server",
+      "auth": true,
+      "description": "KPIs, métricas, actividades",
+      "status": "OK"
+    },
+    {
+      "path": "/dashboard/contacts",
+      "file": "app/dashboard/contacts/page.tsx",
+      "type": "Client",
+      "auth": true,
+      "description": "CRUD contactos",
+      "status": "OK_WITH_FIX"
+    },
+    {
+      "path": "/dashboard/leads",
+      "file": "app/dashboard/leads/page.tsx",
+      "type": "Server",
+      "auth": true,
+      "description": "Tabla leads, stats",
+      "status": "OK"
+    },
+    {
+      "path": "/dashboard/opportunities",
+      "file": "app/dashboard/opportunities/page.tsx",
+      "type": "Server",
+      "auth": true,
+      "description": "Pipeline kanban",
+      "status": "OK"
+    },
+    {
+      "path": "/dashboard/quotes",
+      "file": "app/dashboard/quotes/page.tsx",
+      "type": "Server",
+      "auth": true,
+      "description": "Cotizaciones",
+      "status": "PARTIAL"
+    },
+    {
+      "path": "/dashboard/campaigns",
+      "file": "app/dashboard/campaigns/page.tsx",
+      "type": "Client",
+      "auth": true,
+      "description": "Campañas marketing",
+      "status": "PLACEHOLDER"
+    },
+    {
+      "path": "/dashboard/whatsapp",
+      "file": "app/dashboard/whatsapp/page.tsx",
+      "type": "Client",
+      "auth": true,
+      "description": "Conversaciones WhatsApp",
+      "status": "STUB"
+    },
+    {
+      "path": "/dashboard/reports",
+      "file": "app/dashboard/reports/page.tsx",
+      "type": "Client",
+      "auth": true,
+      "description": "Reportes/analytics",
+      "status": "PLACEHOLDER"
+    },
+    {
+      "path": "/dashboard/settings",
+      "file": "app/dashboard/settings/page.tsx",
+      "type": "Client",
+      "auth": true,
+      "description": "Configuración",
+      "status": "PLACEHOLDER"
+    },
+    {
+      "path": "/api/auth/[...nextauth]",
+      "file": "app/api/auth/[...nextauth]/route.ts",
+      "methods": ["GET", "POST"],
+      "description": "NextAuth handlers"
+    },
+    {
+      "path": "/api/contacts",
+      "file": "app/api/contacts/route.ts",
+      "methods": ["GET", "POST"],
+      "description": "Listar/crear contactos",
+      "status": "FIXED"
+    },
+    {
+      "path": "/api/contacts/[id]",
+      "file": "app/api/contacts/[id]/route.ts",
+      "methods": ["GET", "PATCH", "DELETE"],
+      "description": "CRUD individual contacto",
+      "status": "FIXED"
+    },
+    {
+      "path": "/api/accounts",
+      "file": "app/api/accounts/route.ts",
+      "methods": ["GET"],
+      "description": "Listar empresas (Company)",
+      "status": "FIXED"
+    }
+  ],
+  "db_models_summary": [
+    {
+      "name": "User",
+      "category": "Core CRM",
+      "description": "Usuarios del sistema",
+      "relations": ["Role", "Contact", "Lead", "Opportunity", "Activity", "Task"]
+    },
+    {
+      "name": "Role",
+      "category": "Core CRM",
+      "description": "Roles RBAC (Admin, Gerencia, Ventas, Marketing)",
+      "key_field": "permissions (JSON)"
+    },
+    {
+      "name": "Contact",
+      "category": "Core CRM",
+      "description": "Personas contacto",
+      "relations": ["Company", "Lead", "Opportunity"]
+    },
+    {
+      "name": "Company",
+      "category": "Core CRM",
+      "description": "Empresas/clientes (renombrado de Account)",
+      "note": "Conflicto con NextAuth Account resuelto"
+    },
+    {
+      "name": "Lead",
+      "category": "Core CRM",
+      "description": "Leads de ventas",
+      "relations": ["Contact", "Company", "Opportunity"]
+    },
+    {
+      "name": "Opportunity",
+      "category": "Core CRM",
+      "description": "Oportunidades en pipeline",
+      "relations": ["Pipeline", "Stage", "Contact", "Company", "Quote"]
+    },
+    {
+      "name": "Pipeline",
+      "category": "Core CRM",
+      "description": "Pipelines de ventas",
+      "relations": ["Stage", "Opportunity"]
+    },
+    {
+      "name": "Stage",
+      "category": "Core CRM",
+      "description": "Etapas del pipeline",
+      "key_field": "type (open/won/lost)"
+    },
+    {
+      "name": "Activity",
+      "category": "Actividad",
+      "description": "Actividades (llamadas, emails, reuniones)"
+    },
+    {
+      "name": "Task",
+      "category": "Actividad",
+      "description": "Tareas asignadas"
+    },
+    {
+      "name": "Note",
+      "category": "Actividad",
+      "description": "Notas adjuntas a entidades"
+    },
+    {
+      "name": "Product",
+      "category": "Productos",
+      "description": "Catálogo (tractores, implementos, repuestos)"
+    },
+    {
+      "name": "Quote",
+      "category": "Productos",
+      "description": "Cotizaciones",
+      "relations": ["QuoteItem", "Opportunity"]
+    },
+    {
+      "name": "QuoteItem",
+      "category": "Productos",
+      "description": "Items de cotización"
+    },
+    {
+      "name": "Campaign",
+      "category": "Marketing",
+      "description": "Campañas de marketing"
+    },
+    {
+      "name": "WabaConfig",
+      "category": "WhatsApp",
+      "description": "Configuración WhatsApp Business Account"
+    },
+    {
+      "name": "WaConversation",
+      "category": "WhatsApp",
+      "description": "Conversaciones WhatsApp"
+    },
+    {
+      "name": "WaMessage",
+      "category": "WhatsApp",
+      "description": "Mensajes WhatsApp"
+    },
+    {
+      "name": "WebhookEvent",
+      "category": "WhatsApp",
+      "description": "Eventos webhook WhatsApp"
+    },
+    {
+      "name": "AuditLog",
+      "category": "Sistema",
+      "description": "Registro de acciones"
+    },
+    {
+      "name": "Account",
+      "category": "NextAuth",
+      "description": "OAuth accounts (NextAuth)"
+    },
+    {
+      "name": "Session",
+      "category": "NextAuth",
+      "description": "Sesiones NextAuth"
+    },
+    {
+      "name": "VerificationToken",
+      "category": "NextAuth",
+      "description": "Tokens verificación NextAuth"
+    }
+  ],
+  "modules_status": [
+    {
+      "module": "Login/Auth",
+      "route": "/login",
+      "status": "OK",
+      "issues": [],
+      "priority": "P3"
+    },
+    {
+      "module": "Dashboard Métricas",
+      "route": "/dashboard",
+      "status": "OK",
+      "issues": [],
+      "priority": "P3"
+    },
+    {
+      "module": "Contactos",
+      "route": "/dashboard/contacts",
+      "status": "OK_WITH_FIX",
+      "issues": [
+        "RESUELTO: faltaba import zod",
+        "RESUELTO: db.account → db.company"
+      ],
+      "priority": "P1",
+      "pending": ["Agregar paginación UI", "Mejorar error handling"]
+    },
+    {
+      "module": "Leads",
+      "route": "/dashboard/leads",
+      "status": "OK",
+      "issues": [],
+      "priority": "P2",
+      "pending": ["Filtros avanzados"]
+    },
+    {
+      "module": "Oportunidades",
+      "route": "/dashboard/opportunities",
+      "status": "OK",
+      "issues": [],
+      "priority": "P2",
+      "pending": ["Drag & drop entre etapas"]
+    },
+    {
+      "module": "Cotizaciones",
+      "route": "/dashboard/quotes",
+      "status": "PARTIAL",
+      "issues": ["CRUD no testeado", "PDF generator no probado"],
+      "priority": "P1"
+    },
+    {
+      "module": "Campañas",
+      "route": "/dashboard/campaigns",
+      "status": "PLACEHOLDER",
+      "issues": ["Sin API routes", "Solo UI mockup"],
+      "priority": "P3"
+    },
+    {
+      "module": "WhatsApp",
+      "route": "/dashboard/whatsapp",
+      "status": "STUB",
+      "issues": ["Stub mode (WHATSAPP_ENABLED=false)", "Integración real falta"],
+      "priority": "P2"
+    },
+    {
+      "module": "Reportes",
+      "route": "/dashboard/reports",
+      "status": "PLACEHOLDER",
+      "issues": ["Solo UI mockup", "Sin lógica de generación"],
+      "priority": "P3"
+    },
+    {
+      "module": "Settings",
+      "route": "/dashboard/settings",
+      "status": "PLACEHOLDER",
+      "issues": ["Solo UI mockup", "Sin API configuración"],
+      "priority": "P3"
+    }
+  ],
+  "critical_bugs": [
+    {
+      "id": "BUG-001",
+      "severity": "CRITICAL",
+      "status": "RESOLVED",
+      "title": "Módulo Contactos: Import de zod faltante",
+      "file": "src/app/api/contacts/route.ts",
+      "line": 137,
+      "description": "Faltaba 'import { z } from \"zod\"' causando ReferenceError en POST",
+      "impact": "Crear/editar contactos crasheaba con error 500",
+      "fix_applied": "Import agregado en línea 6",
+      "fix_date": "2026-02-18"
+    },
+    {
+      "id": "BUG-002",
+      "severity": "CRITICAL",
+      "status": "RESOLVED",
+      "title": "Módulo Contactos: Modelo incorrecto db.account",
+      "files": [
+        "src/app/api/contacts/route.ts",
+        "src/app/api/contacts/[id]/route.ts"
+      ],
+      "lines": [90, 90],
+      "description": "Uso de db.account.findUnique() cuando modelo es Company",
+      "impact": "Validación de empresa al crear contacto fallaba con Prisma error",
+      "fix_applied": "Cambiado db.account → db.company en 2 archivos",
+      "fix_date": "2026-02-18"
+    },
+    {
+      "id": "SEC-001",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "title": "Next.js versión con vulnerabilidad",
+      "description": "next@14.2.0 tiene CVE conocido",
+      "impact": "Riesgo de seguridad en producción",
+      "recommendation": "npm install next@latest"
+    },
+    {
+      "id": "SEC-002",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "title": "20 vulnerabilidades en dependencias",
+      "description": "1 moderate, 18 high, 1 critical",
+      "impact": "Riesgo de seguridad",
+      "recommendation": "npm audit fix --force"
+    },
+    {
+      "id": "DEV-001",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "title": "ESLint no configurado",
+      "description": "Falta .eslintrc.json, npm run lint falla",
+      "impact": "No se detectan errores automáticamente",
+      "recommendation": "Ejecutar npm run lint y elegir Strict config"
+    },
+    {
+      "id": "BUILD-001",
+      "severity": "MEDIUM",
+      "status": "UNKNOWN",
+      "title": "Build de producción no verificado",
+      "description": "npm run build nunca ejecutado",
+      "impact": "Desconocido si hay errores TypeScript o optimización",
+      "recommendation": "Ejecutar npm run build antes de deploy"
+    }
+  ],
+  "contacts_bug": {
+    "summary": "Ver BUG_CONTACTS_REPORT.md para detalle completo",
+    "root_causes": [
+      "Import faltante de zod en API route",
+      "Uso de modelo Account (renombrado a Company) sin actualizar referencias"
+    ],
+    "files_affected": [
+      "src/app/api/contacts/route.ts",
+      "src/app/api/contacts/[id]/route.ts"
+    ],
+    "fix_status": "RESOLVED",
+    "verification_pending": true,
+    "related_issues": [
+      "Campo account en relaciones puede confundir (debería ser company)",
+      "Sin tests E2E para validar fix"
+    ]
+  },
+  "commands_run": [
+    {
+      "command": "npm install",
+      "status": "OK",
+      "notes": "623 packages, 20 vulnerabilidades detectadas"
+    },
+    {
+      "command": "npm run prisma:generate",
+      "status": "OK",
+      "notes": "Prisma Client v5.22.0 generado"
+    },
+    {
+      "command": "npm run prisma:migrate",
+      "status": "OK",
+      "notes": "Migration 'init' aplicada, DB radeco_crm creada"
+    },
+    {
+      "command": "npm run prisma:seed",
+      "status": "OK",
+      "notes": "5 usuarios, 20 productos, 2 empresas, 3 contactos, 3 leads, 2 oportunidades"
+    },
+    {
+      "command": "npm run dev",
+      "status": "OK",
+      "notes": "Servidor corriendo en localhost:3000"
+    },
+    {
+      "command": "npm run lint",
+      "status": "PENDING",
+      "notes": "Requiere configuración de ESLint"
+    },
+    {
+      "command": "npm run build",
+      "status": "NOT_EXECUTED",
+      "notes": "Pendiente por priorización de bug fix"
+    },
+    {
+      "command": "npm run test",
+      "status": "NOT_EXECUTED",
+      "notes": "Sin tests implementados"
+    }
+  ],
+  "fix_plan_sprints": [
+    {
+      "sprint": 1,
+      "name": "CRM Funcional Core",
+      "duration": "1-2 semanas",
+      "objective": "Hacer el CRM usable para equipo de ventas con operaciones CRUD core sin crashes",
+      "tasks": [
+        {
+          "id": 1,
+          "title": "Agregar import de zod en API routes",
+          "status": "DONE",
+          "priority": "P0"
+        },
+        {
+          "id": 2,
+          "title": "Cambiar db.account → db.company",
+          "status": "DONE",
+          "priority": "P0"
+        },
+        {
+          "id": 3,
+          "title": "Configurar ESLint (ejecutar npm run lint, elegir Strict)",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 4,
+          "title": "Ejecutar npm run build y resolver TypeScript errors",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 5,
+          "title": "Actualizar Next.js a versión segura",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 6,
+          "title": "Agregar error boundaries (dashboard/error.tsx)",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 7,
+          "title": "Agregar loading states (dashboard/loading.tsx)",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 8,
+          "title": "Implementar paginación UI en Contactos",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 9,
+          "title": "Agregar toast notifications para errores",
+          "status": "TODO",
+          "priority": "P1"
+        },
+        {
+          "id": 10,
+          "title": "Testear CRUD completo de Cotizaciones",
+          "status": "TODO",
+          "priority": "P1"
+        }
+      ],
+      "acceptance_criteria": [
+        "npm run build ejecuta sin errores",
+        "npm run lint ejecuta sin errores críticos",
+        "Contactos: CRUD completo funciona",
+        "Contactos: Paginación muestra controles",
+        "Cotizaciones: Crear cotización guarda en DB",
+        "Errores de red muestran toast",
+        "Navegación no muestra pantalla blanca"
+      ]
+    },
+    {
+      "sprint": 2,
+      "name": "UX Pulido + Integraciones",
+      "duration": "2-3 semanas",
+      "objective": "Mejorar UX, agregar WhatsApp real, implementar reportes básicos",
+      "tasks": [
+        {
+          "id": 11,
+          "title": "Integración WhatsApp real con Meta Cloud API",
+          "priority": "P1"
+        },
+        {
+          "id": 12,
+          "title": "Reportes básicos (CSV export, pipeline velocity)",
+          "priority": "P2"
+        },
+        {
+          "id": 13,
+          "title": "Loading skeletons en tablas",
+          "priority": "P2"
+        },
+        {
+          "id": 14,
+          "title": "Infinite scroll en contactos",
+          "priority": "P2"
+        },
+        {
+          "id": 15,
+          "title": "Filtros avanzados en Leads y Oportunidades",
+          "priority": "P2"
+        },
+        {
+          "id": 16,
+          "title": "Suite de tests E2E con Playwright",
+          "priority": "P1"
+        }
+      ],
+      "acceptance_criteria": [
+        "Enviar mensaje WhatsApp desde UI → llega a cliente",
+        "Recibir mensaje → aparece en dashboard",
+        "Generar CSV descarga archivo válido",
+        "Tests E2E pasan (5 escenarios mínimo)",
+        "Filtros funcionan correctamente"
+      ]
+    },
+    {
+      "sprint": 3,
+      "name": "Optimización + Features Avanzadas",
+      "duration": "2-3 semanas",
+      "objective": "Optimizar performance, agregar features de poder, preparar para producción",
+      "tasks": [
+        {
+          "id": 17,
+          "title": "Implementar Server Actions para mutaciones",
+          "priority": "P2"
+        },
+        {
+          "id": 18,
+          "title": "Lazy loading de dashboards pesados",
+          "priority": "P2"
+        },
+        {
+          "id": 19,
+          "title": "Optimizar queries Prisma (dataloader)",
+          "priority": "P2"
+        },
+        {
+          "id": 20,
+          "title": "Asignación automática de leads (round-robin)",
+          "priority": "P3"
+        },
+        {
+          "id": 21,
+          "title": "Notificaciones en tiempo real",
+          "priority": "P3"
+        },
+        {
+          "id": 22,
+          "title": "Rate limiting en API routes",
+          "priority": "P1"
+        },
+        {
+          "id": 23,
+          "title": "CI/CD pipeline (GitHub Actions)",
+          "priority": "P1"
+        },
+        {
+          "id": 24,
+          "title": "Docker deploy to production",
+          "priority": "P1"
+        }
+      ],
+      "acceptance_criteria": [
+        "Lighthouse score > 90",
+        "Bundle size < 200KB (first load)",
+        "Rate limiting: 100 req/min por IP",
+        "CI/CD: push to main → auto deploy"
+      ]
+    }
+  ],
+  "imprescindible_mvp": [
+    "Auth + RBAC (LISTO)",
+    "Contactos CRUD (LISTO con fix)",
+    "Leads CRUD (LISTO)",
+    "Oportunidades pipeline (LISTO)",
+    "Cotizaciones CRUD (TESTEAR)",
+    "Paginación UI (FALTA)",
+    "Error handling visible (FALTA)",
+    "Build de producción (PENDIENTE)",
+    "Tests E2E (FALTA)",
+    "Configuración ESLint (FALTA)"
+  ],
+  "nice_to_have": [
+    "WhatsApp integración real",
+    "Reportes/analytics avanzados",
+    "Campañas de marketing",
+    "Calendario de actividades",
+    "Notificaciones push",
+    "Exportar a PDF/Excel",
+    "Integración con Gmail/Outlook",
+    "Mobile app (React Native)",
+    "Dashboard configurable por usuario",
+    "AI: recomendación de next best action"
+  ],
+  "recommendations": {
+    "immediate": [
+      "Ejecutar npm run build y verificar errores",
+      "Configurar ESLint",
+      "Actualizar Next.js a última versión segura",
+      "Testing manual exhaustivo de Contactos post-fix"
+    ],
+    "short_term": [
+      "Implementar Sprint 1 completo (10 tareas)",
+      "Agregar tests E2E para flujos críticos",
+      "Deploy a staging environment",
+      "Feedback de equipo RADECO"
+    ],
+    "long_term": [
+      "Migrar a Docker Compose para consistency",
+      "Implementar monitoring (Sentry)",
+      "Agregar analytics de uso",
+      "Plan de escalabilidad (1000+ usuarios)"
+    ]
+  },
+  "conclusion": "El CRM RADECO tiene una base sólida (arquitectura Next.js App Router, diseño premium, RBAC completo, 23 modelos de DB bien diseñados). Los bugs críticos detectados fueron resueltos durante la auditoría. Con 4-6 semanas de desarrollo enfocado (siguiendo este plan), el CRM estará production-ready para uso interno de RADECO.",
+  "next_review": "Post-Sprint 1 (verificar que fixes aplicados funcionan en producción)"
+}

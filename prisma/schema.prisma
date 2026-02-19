@@ -1,0 +1,742 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTENTICACIÓN Y RBAC
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String // bcrypt hash
+  avatar        String?
+  phone         String?
+  active        Boolean   @default(true)
+  roleId        String
+  role          Role      @relation(fields: [roleId], references: [id])
+  
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relaciones operativas
+  assignedLeads        Lead[]         @relation("AssignedUser")
+  assignedOpportunities Opportunity[] @relation("AssignedUser")
+  assignedTasks        Task[]         @relation("AssignedUser")
+  createdActivities    Activity[]     @relation("CreatedBy")
+  createdNotes         Note[]         @relation("CreatedBy")
+  assignedConversations WaConversation[] @relation("AssignedUser")
+  createdQuotes        Quote[]        @relation("CreatedBy")
+  createdCampaigns     Campaign[]     @relation("CreatedBy")
+  auditLogs            AuditLog[]     @relation("PerformedBy")
+  
+  // NextAuth
+  accounts      Account[]
+  sessions      Session[]
+
+  @@index([email])
+  @@index([roleId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // Admin, Gerencia, Ventas, Marketing, Taller, Solo-lectura
+  description String?
+  level       Int      @default(0) // Jerarquía: Admin=100, Gerencia=80, etc
+  permissions Json     // Array de permisos: ["leads:read", "leads:write", "opportunities:all"]
+  
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+// ============================================
+// CONTACTOS Y CUENTAS
+// ============================================
+
+model Contact {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String?
+  fullName    String   // Computed: firstName + lastName
+  email       String?
+  phone       String?
+  whatsapp    String?  // Número de WhatsApp
+  position    String?  // Cargo: "Administrador finca", "Camaronero", etc
+  
+  accountId   String?
+  account     Company? @relation(fields: [accountId], references: [id])
+  
+  province    String?  // Guayas, Los Ríos, Manabí, etc
+  city        String?  // Cantón
+  address     String?
+  
+  source      String?  // "WhatsApp", "Web", "Feria", "Referido", "Llamada"
+  tags        Json?    // Array de strings: ["VIP", "Moroso", etc]
+  customFields Json?   // Campos adicionales
+  
+  optIn       Boolean  @default(true) // Acepta contacto por WhatsApp
+  doNotContact Boolean @default(false)
+  
+  notes       String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  leads       Lead[]
+  opportunities Opportunity[]
+  activities  Activity[]
+  notesRecords Note[]
+  quotes      Quote[]
+  waConversations WaConversation[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([whatsapp])
+  @@index([accountId])
+  @@index([fullName])
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String   // Nombre de la empresa o finca
+  type        String   // "Agricultor", "Camaronero", "Agroindustria", "Distribuidor"
+  industry    String?  // "Arroz", "Banano", "Camarón", "Maíz", "Palma"
+  
+  taxId       String?  // RUC
+  email       String?
+  phone       String?
+  website     String?
+  
+  province    String?
+  city        String?
+  address     String?
+  
+  size        String?  // "1-10 ha", "10-50 ha", "50-200 ha", ">200 ha"
+  revenue     String?  // Estimado anual
+  
+  tags        Json?
+  customFields Json?
+  
+  notes       String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  contacts    Contact[]
+  leads       Lead[]
+  opportunities Opportunity[]
+  quotes      Quote[]
+
+  @@index([name])
+  @@index([taxId])
+}
+
+// ============================================
+// LEADS Y OPORTUNIDADES
+// ============================================
+
+model Lead {
+  id          String   @id @default(cuid())
+  title       String   // "Consulta tractor TATU 60HP"
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  accountId   String?
+  account     Company? @relation(fields: [accountId], references: [id])
+  
+  source      String   // "WhatsApp", "Web Form", "Instagram", "Facebook", "Feria", "Llamada", "Referido"
+  status      String   @default("Nuevo") // Nuevo, Contactado, Calificado, Convertido, Descartado
+  
+  interest    String?  // "Implementos", "Repuestos", "Tractores", "Servicio Técnico"
+  crop        String?  // "Arroz", "Banano", "Camarón", "Maíz", "Cacao"
+  province    String?
+  city        String?
+  
+  assignedToId String?
+  assignedTo  User?    @relation("AssignedUser", fields: [assignedToId], references: [id])
+  
+  priority    String   @default("Media") // Alta, Media, Baja
+  score       Int      @default(0) // Lead scoring 0-100
+  
+  notes       String?  @db.Text
+  tags        Json?
+  customFields Json?
+  
+  convertedToOpportunityId String? @unique
+  convertedToOpportunity   Opportunity? @relation("ConvertedFromLead")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  convertedAt DateTime?
+  
+  // Relaciones
+  activities  Activity[]
+  tasks       Task[]
+  notesRecords Note[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model Pipeline {
+  id          String   @id @default(cuid())
+  name        String   // "Implementos", "Repuestos", "Tractores"
+  description String?
+  type        String   // "Implementos", "Repuestos", "Maquinaria"
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  
+  stages      Stage[]
+  opportunities Opportunity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([active])
+}
+
+model Stage {
+  id          String   @id @default(cuid())
+  name        String   // "Nuevo", "Calificado", "Cotización", "Negociación", "Ganado", "Perdido"
+  pipelineId  String
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  
+  order       Int      @default(0)
+  probability Int      @default(0) // % de probabilidad de cierre
+  type        String   @default("open") // open, won, lost
+  color       String?  // Para visualización Kanban
+  
+  opportunities Opportunity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([pipelineId])
+  @@index([order])
+}
+
+model Opportunity {
+  id          String   @id @default(cuid())
+  title       String   // "Venta rastra TATU - Hacienda El Progreso"
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  accountId   String?
+  account     Company? @relation(fields: [accountId], references: [id])
+  
+  pipelineId  String
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id])
+  
+  stageId     String
+  stage       Stage    @relation(fields: [stageId], references: [id])
+  
+  value       Float    @default(0) // Valor estimado en USD
+  probability Int      @default(0) // % de cierre
+  
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+  
+  assignedToId String?
+  assignedTo  User?    @relation("AssignedUser", fields: [assignedToId], references: [id])
+  
+  products    Json?    // Array de productos de interés
+  priority    String   @default("Media")
+  
+  lostReason  String?  // Si se pierde
+  wonReason   String?  // Si se gana
+  
+  notes       String?  @db.Text
+  tags        Json?
+  customFields Json?
+  
+  leadId      String?  @unique
+  lead        Lead?    @relation("ConvertedFromLead", fields: [leadId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  activities  Activity[]
+  tasks       Task[]
+  notesRecords Note[]
+  quotes      Quote[]
+
+  @@index([stageId])
+  @@index([pipelineId])
+  @@index([assignedToId])
+  @@index([expectedCloseDate])
+  @@index([createdAt])
+}
+
+// ============================================
+// ACTIVIDADES Y TAREAS
+// ============================================
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String   // "call", "whatsapp", "email", "visit", "demo"
+  subject     String
+  description String?  @db.Text
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  
+  opportunityId String?
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  
+  createdById String
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  duration    Int?     // Duración en minutos
+  outcome     String?  // "Programado seguimiento", "No contestó", "Interesado", etc
+  
+  scheduledAt DateTime?
+  completedAt DateTime?
+  
+  metadata    Json?    // Data adicional (ej: recording_url, whatsapp_message_id)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([contactId])
+  @@index([leadId])
+  @@index([opportunityId])
+  @@index([createdById])
+  @@index([scheduledAt])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  
+  opportunityId String?
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  
+  assignedToId String
+  assignedTo  User     @relation("AssignedUser", fields: [assignedToId], references: [id])
+  
+  priority    String   @default("Media") // Alta, Media, Baja
+  status      String   @default("Pendiente") // Pendiente, En progreso, Completada, Cancelada
+  
+  dueDate     DateTime?
+  completedAt DateTime?
+  
+  reminderAt  DateTime?
+  
+  tags        Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  
+  opportunityId String?
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  
+  createdById String
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  attachments Json?    // Array de URLs o referencias a archivos
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([contactId])
+  @@index([leadId])
+  @@index([opportunityId])
+  @@index([createdById])
+}
+
+// ============================================
+// PRODUCTOS Y COTIZACIONES
+// ============================================
+
+model Product {
+  id          String   @id @default(cuid())
+  code        String   @unique // SKU o código interno
+  name        String
+  description String?  @db.Text
+  
+  category    String   // "Implementos", "Repuestos", "Tractores", "Accesorios"
+  brand       String?  // "TATU", "BALDAN", "MINOS", "CHANGFA", etc
+  
+  price       Float    @default(0)
+  cost        Float?   // Costo (privado)
+  
+  stock       Int?
+  unit        String   @default("Unidad") // Unidad, Kit, Metro, etc
+  
+  active      Boolean  @default(true)
+  featured    Boolean  @default(false)
+  
+  imageUrl    String?
+  specifications Json? // Especificaciones técnicas
+  
+  tags        Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  quoteItems  QuoteItem[]
+
+  @@index([category])
+  @@index([brand])
+  @@index([active])
+  @@index([code])
+}
+
+model Quote {
+  id          String   @id @default(cuid())
+  number      String   @unique // QT-2026-001
+  title       String
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  accountId   String?
+  account     Company? @relation(fields: [accountId], references: [id])
+  
+  opportunityId String?
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  
+  status      QuoteStatus @default(BORRADOR)
+  
+  subtotal    Float    @default(0)
+  discount    Float    @default(0) // Descuento en %
+  tax         Float    @default(12) // IVA 12%
+  total       Float    @default(0)
+  
+  validUntil  DateTime?
+  sentAt      DateTime?
+  negotiatedAt DateTime?
+  acceptedAt  DateTime?
+  lostAt      DateTime?
+  statusUpdatedAt DateTime @default(now())
+  
+  notes       String?  @db.Text
+  termsAndConditions String? @db.Text
+  
+  pdfUrl      String?  // URL del PDF generado
+  
+  createdById String
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  items       QuoteItem[]
+  statusHistory QuoteStatusHistory[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([number])
+  @@index([status])
+  @@index([contactId])
+  @@index([accountId])
+  @@index([opportunityId])
+  @@index([createdAt])
+}
+
+model QuoteStatusHistory {
+  id        String @id @default(cuid())
+  quoteId   String
+  quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  status    QuoteStatus
+  note      String?
+  createdById String
+  createdBy User @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([quoteId])
+  @@index([status])
+  @@index([createdById])
+}
+
+enum QuoteStatus {
+  BORRADOR
+  ENVIADA
+  NEGOCIACION
+  ACEPTADA
+  PERDIDA
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  discount    Float    @default(0) // Descuento en % por ítem
+  total       Float
+  
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([quoteId])
+  @@index([productId])
+}
+
+// ============================================
+// CAMPAÑAS
+// ============================================
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  type        String   @default("WhatsApp") // WhatsApp, Email, SMS
+  
+  status      String   @default("Borrador") // Borrador, Programada, Enviando, Completada, Pausada, Cancelada
+  
+  segmentCriteria Json // Criterios de segmentación
+  
+  templateId  String?  // WhatsApp template ID (si aplica)
+  templateName String? // Nombre del template
+  message     String?  @db.Text // Mensaje (si no es template)
+  
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  
+  // Estadísticas
+  targetCount Int      @default(0) // Contactos objetivo
+  sentCount   Int      @default(0)
+  deliveredCount Int   @default(0)
+  readCount   Int      @default(0)
+  repliedCount Int     @default(0)
+  errorCount  Int      @default(0)
+  
+  createdById String
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  tags        Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdById])
+  @@index([scheduledAt])
+}
+
+// ============================================
+// WHATSAPP BUSINESS
+// ============================================
+
+model WabaConfig {
+  id          String   @id @default(cuid())
+  phoneNumberId String @unique
+  wabaId      String
+  accessToken String   // Encriptado
+  verifyToken String
+  
+  phoneNumber String   // Número formateado +593...
+  displayName String?
+  
+  active      Boolean  @default(true)
+  webhookUrl  String?
+  
+  metadata    Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([phoneNumberId])
+}
+
+model WaConversation {
+  id          String   @id @default(cuid())
+  waId        String   // WhatsApp ID del contacto (phone number)
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  assignedToId String?
+  assignedTo  User?    @relation("AssignedUser", fields: [assignedToId], references: [id])
+  
+  status      String   @default("Abierta") // Abierta, En espera, Cerrada
+  priority    String   @default("Normal") // Urgente, Alta, Normal, Baja
+  
+  labels      Json?    // ["Cotización", "Repuestos", "Urgente"]
+  
+  lastMessageAt DateTime @default(now())
+  lastMessagePreview String?
+  
+  unreadCount Int      @default(0)
+  
+  messages    WaMessage[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([waId])
+  @@index([contactId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([lastMessageAt])
+}
+
+model WaMessage {
+  id          String   @id @default(cuid())
+  messageId   String   @unique // ID de WhatsApp (wamid.xxxx)
+  
+  conversationId String
+  conversation WaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  direction   String   // inbound, outbound
+  type        String   // text, image, document, audio, video, location, template
+  
+  from        String   // Número remitente
+  to          String   // Número destinatario
+  
+  text        String?  @db.Text
+  mediaUrl    String?
+  mediaType   String?
+  
+  status      String?  // sent, delivered, read, failed (solo outbound)
+  
+  templateName String? // Si es template
+  templateData Json?
+  
+  metadata    Json?
+  
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([messageId])
+  @@index([from])
+  @@index([timestamp])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  source      String   // "whatsapp", "meta", etc
+  eventType   String
+  payload     Json
+  processed   Boolean  @default(false)
+  error       String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([source])
+  @@index([processed])
+  @@index([createdAt])
+}
+
+// ============================================
+// AUDITORÍA
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // "created", "updated", "deleted", "status_changed", etc
+  entity      String   // "Lead", "Opportunity", "Quote", etc
+  entityId    String
+  
+  userId      String
+  user        User     @relation("PerformedBy", fields: [userId], references: [id])
+  
+  changes     Json?    // Antes/después
+  metadata    Json?
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================
+// NEXTAUTH MODELS
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
