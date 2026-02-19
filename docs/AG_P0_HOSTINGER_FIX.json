@@ -1,0 +1,156 @@
+{
+    "fix": {
+        "id": "P0-HOSTINGER-2026-02-19",
+        "branch": "chore/hostinger-p0",
+        "date": "2026-02-19",
+        "author": "Antigravity",
+        "type": "hardening",
+        "description": "P0 Hostinger hardening: connection pool, body size limit, image CVE workaround"
+    },
+    "changes": [
+        {
+            "id": "P0-1",
+            "file": ".env",
+            "type": "config",
+            "sensitive": true,
+            "before": "DATABASE_URL=\"mysql://root@localhost:3306/radeco_crm\"",
+            "after": "DATABASE_URL=\"mysql://root@localhost:3306/radeco_crm?connection_limit=3&pool_timeout=20\"",
+            "note": "Password de prod NO incluido. Configurar manualmente en Hostinger panel."
+        },
+        {
+            "id": "P0-2",
+            "file": ".env.example",
+            "type": "documentation",
+            "sensitive": false,
+            "change": "Corregido PostgreSQL → MySQL. Añadidos comentarios de connection_limit. Plantilla ahora refleja el proveedor real.",
+            "after_template": "mysql://USER:PASSWORD@HOST:3306/radeco_crm?connection_limit=3&pool_timeout=20"
+        },
+        {
+            "id": "P0-3",
+            "file": "next.config.js",
+            "type": "config",
+            "sensitive": false,
+            "changes": [
+                {
+                    "key": "experimental.serverActions.bodySizeLimit",
+                    "before": "10mb",
+                    "after": "2mb",
+                    "rationale": "Previene spikes de RAM en Hostinger por payloads grandes en Server Actions"
+                },
+                {
+                    "key": "images.unoptimized",
+                    "before": "false (implicit)",
+                    "after": "true",
+                    "rationale": "Workaround CVE GHSA-h25m-26qc-wcjf: elimina el vector de DoS deshabilitando el endpoint /_next/image"
+                },
+                {
+                    "key": "images.remotePatterns",
+                    "before": "[{ protocol: 'https', hostname: '**' }]",
+                    "after": "removed",
+                    "rationale": "El wildcard hacía que Next.js actuara como proxy ilimitado de imágenes externas"
+                }
+            ]
+        }
+    ],
+    "validation": {
+        "lint": {
+            "command": "npm run lint",
+            "exit_code": 0,
+            "result": "PASS",
+            "output": "No ESLint warnings or errors"
+        },
+        "build": {
+            "command": "npm run build",
+            "exit_code": 0,
+            "result": "PASS",
+            "output": "Compiled successfully, types OK, standalone output",
+            "first_load_js_kb": 87.3
+        },
+        "audit": {
+            "command": "npm audit --omit=dev",
+            "exit_code": 1,
+            "result": "WARN_EXPECTED",
+            "vulnerabilities": [
+                {
+                    "package": "next",
+                    "severity": "high",
+                    "cve": "GHSA-h25m-26qc-wcjf",
+                    "title": "DoS via Image Optimization",
+                    "status": "VECTOR_MITIGATED",
+                    "mitigation": "images.unoptimized=true desactiva el endpoint /_next/image",
+                    "note": "El reporte de audit persiste hasta upgrade Next.js 15+. NO usar --force."
+                }
+            ]
+        }
+    },
+    "risks_mitigated": [
+        {
+            "risk_id": "RISK-001",
+            "title": "Prisma sin connection_limit → Too many connections MySQL",
+            "status": "MITIGATED",
+            "solution": "connection_limit=3&pool_timeout=20 en DATABASE_URL"
+        },
+        {
+            "risk_id": "RISK-002",
+            "title": "bodySizeLimit 10mb → RAM spikes",
+            "status": "MITIGATED",
+            "solution": "bodySizeLimit reducido a 2mb"
+        },
+        {
+            "risk_id": "RISK-006",
+            "title": "CVE GHSA-h25m-26qc-wcjf DoS via Image Optimization",
+            "status": "VECTOR_MITIGATED",
+            "solution": "images.unoptimized=true — full fix requiere Next.js 15+ upgrade"
+        },
+        {
+            "risk_id": "RISK-008",
+            "title": "images hostname '**' wildcard → proxy de imágenes ilimitado",
+            "status": "MITIGATED",
+            "solution": "remotePatterns eliminado junto con images.unoptimized=true"
+        }
+    ],
+    "manual_actions_required": [
+        {
+            "priority": "CRITICAL",
+            "environment": "production",
+            "action": "Actualizar DATABASE_URL en Hostinger panel con parámetros connection_limit=3&pool_timeout=20",
+            "where": "Hostinger Panel → Node.js App → Environment Variables (o SSH)"
+        },
+        {
+            "priority": "HIGH",
+            "environment": "production",
+            "action": "Verificar que NEXTAUTH_SECRET en prod sea diferente al valor de dev",
+            "where": "Hostinger Panel → Environment Variables"
+        },
+        {
+            "priority": "NORMAL",
+            "environment": "all",
+            "action": "Abrir PR de chore/hostinger-p0 → main para revisión y merge",
+            "where": "GitHub / repositorio del proyecto"
+        }
+    ],
+    "qa_checklist": {
+        "branch_created": true,
+        "main_untouched": true,
+        "destructive_commands_used": false,
+        "force_audit_fix_used": false,
+        "lint_pass": true,
+        "build_pass": true,
+        "audit_reported_only": true,
+        "docs_created": [
+            "docs/AG_P0_HOSTINGER_FIX.md",
+            "docs/AG_P0_HOSTINGER_FIX.json"
+        ],
+        "pending": [
+            "Actualizar DATABASE_URL en Hostinger prod con connection_limit params",
+            "PR chore/hostinger-p0 → main"
+        ]
+    },
+    "remaining_risks": [
+        "RISK-003: Contacts GET limit=50 con 3 JOINs (P1)",
+        "RISK-004: PDF sin streaming verificado (P1)",
+        "RISK-005: computeTotals duplicada (P1)",
+        "RISK-007: /api/leads no existe (P2)",
+        "CVE Next.js: vector mitigado pero audit sigue reportando hasta upgrade Next 15+"
+    ]
+}

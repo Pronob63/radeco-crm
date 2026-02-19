@@ -1,0 +1,239 @@
+{
+    "audit": {
+        "project": "radeco-crm",
+        "version": "1.0.0",
+        "date": "2026-02-19",
+        "auditor": "Antigravity",
+        "environment": "windows-local",
+        "production_url": "https://crm.plan-radeco.online"
+    },
+    "commands": {
+        "npm_ci": {
+            "exit_code": 0,
+            "status": "PASS",
+            "packages_installed": 624,
+            "warnings": [
+                {
+                    "code": "ERESOLVE",
+                    "message": "nodemailer@7.0.13 installed but @auth/core@0.41.0 peerOptional expects ^6.8.0",
+                    "severity": "low",
+                    "impact": "Only affects email magic links (not used — Credentials provider only)"
+                }
+            ],
+            "vulnerabilities_all_deps": {
+                "total": 20,
+                "moderate": 1,
+                "high": 19,
+                "critical": 0
+            }
+        },
+        "npm_lint": {
+            "exit_code": 0,
+            "status": "PASS",
+            "warnings": 0,
+            "errors": 0
+        },
+        "npm_build": {
+            "exit_code": 0,
+            "status": "PASS",
+            "output_mode": "standalone",
+            "first_load_js_kb": 87.3,
+            "middleware_kb": 78.4,
+            "type_check": "PASS",
+            "compiled": true
+        },
+        "prisma_generate": {
+            "exit_code": 0,
+            "status": "PASS",
+            "client_version": "5.22.0",
+            "provider": "mysql"
+        },
+        "npm_audit_omit_dev": {
+            "exit_code": 1,
+            "status": "WARN",
+            "vulnerabilities": [
+                {
+                    "package": "next",
+                    "installed_version": "14.2.35",
+                    "affected_range": "10.0.0 - 15.5.9",
+                    "severity": "high",
+                    "title": "Next.js self-hosted DoS via Image Optimization",
+                    "advisory": "GHSA-h25m-26qc-wcjf",
+                    "fix": "next@16.1.6 (breaking change — DO NOT apply with --force)",
+                    "workaround": "Set images.unoptimized: true if Image Optimization not needed"
+                }
+            ]
+        }
+    },
+    "critical_routes": {
+        "login": {
+            "exists": true,
+            "path": "src/app/login/",
+            "auth_provider": "credentials",
+            "edge_node_split": "CORRECT",
+            "middleware_protected": true,
+            "status": "OK"
+        },
+        "api_contacts": {
+            "exists": true,
+            "path": "src/app/api/contacts/route.ts",
+            "methods": [
+                "GET",
+                "POST"
+            ],
+            "pagination": true,
+            "default_limit": 50,
+            "default_limit_recommendation": 20,
+            "joins_per_get": 3,
+            "zod_validation": true,
+            "audit_log": true,
+            "status": "OK_WITH_WARNINGS"
+        },
+        "api_contacts_id": {
+            "exists": true,
+            "path": "src/app/api/contacts/[id]/route.ts",
+            "methods_verified": false,
+            "status": "NOT_AUDITED"
+        },
+        "api_quotes": {
+            "exists": true,
+            "path": "src/app/api/quotes/route.ts",
+            "methods": [
+                "GET",
+                "POST"
+            ],
+            "pagination": true,
+            "default_limit": 10,
+            "quote_numbering": "QT-YYYY-NNNN",
+            "status_enum": [
+                "BORRADOR",
+                "ENVIADA",
+                "NEGOCIACION",
+                "ACEPTADA",
+                "PERDIDA"
+            ],
+            "zod_validation": true,
+            "status": "OK"
+        },
+        "api_quotes_id": {
+            "exists": true,
+            "path": "src/app/api/quotes/[id]/route.ts",
+            "methods": [
+                "GET",
+                "PATCH",
+                "DELETE"
+            ],
+            "permission_check": "canAccessQuote (ownership)",
+            "status_history": true,
+            "status": "OK"
+        },
+        "api_leads": {
+            "exists": false,
+            "path": "src/app/api/leads/ — NOT FOUND",
+            "status": "MISSING",
+            "severity": "medium",
+            "note": "Dashboard leads UI exists but API route does not"
+        },
+        "pdf_generation": {
+            "exists": "UNKNOWN",
+            "library": "@react-pdf/renderer",
+            "stream_mode_detected": false,
+            "status": "NOT_FOUND — needs investigation"
+        }
+    },
+    "hostinger_fit": {
+        "edge_node_separation": "CORRECT",
+        "prisma_singleton": "CORRECT",
+        "connection_limit_configured": false,
+        "body_size_limit": "10mb",
+        "body_size_limit_recommendation": "2mb",
+        "output_standalone": true,
+        "image_hostname_wildcard": true
+    },
+    "risks": [
+        {
+            "id": "RISK-001",
+            "priority": "P0",
+            "area": "database",
+            "title": "Prisma sin connection_limit configurado",
+            "severity": "HIGH",
+            "description": "Sin connection_limit en DATABASE_URL, Prisma puede abrir demasiadas conexiones MySQL simultáneas en Hostinger",
+            "fix": "Añadir ?connection_limit=3&pool_timeout=20 al DATABASE_URL"
+        },
+        {
+            "id": "RISK-002",
+            "priority": "P0",
+            "area": "memory",
+            "title": "bodySizeLimit 10mb en Server Actions",
+            "severity": "MEDIUM",
+            "description": "Permite payloads de 10MB en cualquier Server Action, causando spikes de RAM",
+            "fix": "Reducir a 2mb en next.config.js"
+        },
+        {
+            "id": "RISK-003",
+            "priority": "P1",
+            "area": "database",
+            "title": "Contacts GET limit=50 con 3 JOINs",
+            "severity": "MEDIUM",
+            "description": "Default de 50 contactos con account+leads+opportunities JOIN por request",
+            "fix": "Reducir limit a 20 y usar select específico en account"
+        },
+        {
+            "id": "RISK-004",
+            "priority": "P1",
+            "area": "memory",
+            "title": "PDF generation sin streaming verificado",
+            "severity": "HIGH",
+            "description": "react-pdf con renderToBuffer() en concurrencia puede causar OOM en Hostinger",
+            "fix": "Usar renderToStream() en la ruta PDF"
+        },
+        {
+            "id": "RISK-005",
+            "priority": "P1",
+            "area": "code_quality",
+            "title": "computeTotals y normalizeItems duplicadas",
+            "severity": "LOW",
+            "description": "Duplicadas en quotes/route.ts y quotes/[id]/route.ts",
+            "fix": "Extraer a src/lib/quote-utils.ts"
+        },
+        {
+            "id": "RISK-006",
+            "priority": "P2",
+            "area": "security",
+            "title": "CVE GHSA-h25m-26qc-wcjf — Next.js DoS",
+            "severity": "HIGH",
+            "description": "next@14.2.35 vulnerable a DoS via Image Optimization en self-hosted",
+            "fix": "Workaround: images.unoptimized:true. Fix real: upgrade a Next.js 15+ (breaking)"
+        },
+        {
+            "id": "RISK-007",
+            "priority": "P2",
+            "area": "functionality",
+            "title": "API /api/leads no existe",
+            "severity": "MEDIUM",
+            "description": "El módulo de leads tiene UI en dashboard pero no tiene ruta API",
+            "fix": "Implementar src/app/api/leads/route.ts"
+        },
+        {
+            "id": "RISK-008",
+            "priority": "P2",
+            "area": "security",
+            "title": "images.remotePatterns hostname: '**'",
+            "severity": "LOW",
+            "description": "Next.js proxiará imágenes de cualquier dominio externo",
+            "fix": "Acotar a dominios reales usados por la app"
+        }
+    ],
+    "summary": {
+        "overall_status": "PASS_WITH_WARNINGS",
+        "hosting_ready": false,
+        "blocking_issues": [
+            "RISK-001",
+            "RISK-002"
+        ],
+        "p0_actions": 2,
+        "p1_actions": 3,
+        "p2_actions": 3,
+        "immediate_recommendation": "Aplicar P0-1 (connection_limit) y P0-2 (bodySizeLimit) antes del próximo deploy"
+    }
+}
