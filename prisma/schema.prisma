@@ -36,6 +36,7 @@ model User {
   createdNotes         Note[]         @relation("CreatedBy")
   assignedConversations WaConversation[] @relation("AssignedUser")
   createdQuotes        Quote[]        @relation("CreatedBy")
+  createdQuoteStatusHistories QuoteStatusHistory[] @relation("CreatedBy")
   createdCampaigns     Campaign[]     @relation("CreatedBy")
   auditLogs            AuditLog[]     @relation("PerformedBy")
   

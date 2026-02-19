@@ -66,7 +66,7 @@ const canAccessQuote = async (quoteId: string, userId: string) => {
 };
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -156,6 +156,7 @@ export async function PATCH(
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discount: item.discount,
+          total: item.total,
         }));
 
     const quoteDiscount = validated.discount ?? existing.discount;
@@ -243,7 +244,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
